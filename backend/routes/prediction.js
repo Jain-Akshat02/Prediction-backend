@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const openWeather = require('../services/openWeather.service');
+const { necessaryDataExtraction } = require('../services/necessaryInfo.service');
 
 
 const { authenticate } = require('../middleware/auth');
@@ -37,7 +38,8 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    await openWeather.getWeather(lat, lon);
+    const weatherData = await openWeather.getWeather(lat, lon);
+    await necessaryDataExtraction(weatherData);
 
     res.json({ success: true, message: 'Coordinates sent to OpenWeather.' });
 

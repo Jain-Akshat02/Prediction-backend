@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const openWeather = require('../services/openWeather.service');
 const { necessaryDataExtraction } = require('../services/necessaryInfo.service');
-
+const mlService = require('../services/mlService');
 
 const { authenticate } = require('../middleware/auth');
 // /api/predict
@@ -39,9 +39,21 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const weatherData = await openWeather.getWeather(lat, lon);
-    await necessaryDataExtraction(weatherData);
+    const necessaryData = await necessaryDataExtraction(weatherData);
 
-    res.json({ success: true, message: 'Coordinates sent to OpenWeather.' });
+    const prediction = await mlService.predict(necessaryData);
+
+
+
+    res.json({ success: true,
+       data: {
+        latitude: lat,
+        longitude: lon,
+        weather: weatherData,
+        modelInput: necessaryData,
+        prediction
+      }
+    });
 
   } catch (error) {
     console.error('Prediction endpoint error:', error);
@@ -50,6 +62,7 @@ router.post('/', authenticate, async (req, res) => {
       message: 'An internal error occurred while processing coordinates.'
     });
   }
-});
+}); 
+
 
 module.exports = router;

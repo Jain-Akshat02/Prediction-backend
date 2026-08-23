@@ -1,17 +1,16 @@
+const axios = require('axios');
 
-class MLService {
-  async sendCoordinates(latitude, longitude) {
-    //HERE I WILL INTEGRATE THE ENDPOINT
-    
-    // Simulate slight processing/network delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+const predict = async (data) => {
+  const response = await axios.post(
+    'http://127.0.0.1:8000/predict',
+    data
+  );
 
-    return {
-      status: 'pending_integration',
-      message: 'ML model endpoint is not configured yet. Coordinates processed successfully.',
-      timestamp: new Date().toISOString()
-    };
-  }
-}
+  console.log('ML model response:', response.data);
 
-module.exports = new MLService();
+  return response.data;
+};
+
+module.exports = {
+  predict
+};

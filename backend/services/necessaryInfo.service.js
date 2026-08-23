@@ -13,25 +13,26 @@ const necessaryDataExtraction = async (weatherData) => {
     dt,
   } = weatherData;
 
-  return {
-    // OpenWeather dt is Unix timestamp (seconds)
+  const necessaryData = {
+    // OpenWeather timestamp → ISO date
     acq_date: new Date(dt * 1000).toISOString(),
 
-    // OpenWeather gives humidity as percentage (84)
-    // Model expects fraction (0.84)
+    // Percentage → fraction
     Humidity_Fraction: humidity / 100,
 
-    // OpenWeather metric temperature is already Celsius
+    // Already Celsius
     Temperature_C: temp,
 
-    // OpenWeather wind speed is m/s
-    // Model expects km/h
+    // m/s → km/h
     Wind_Speed_kmh: windSpeed * 3.6,
 
-    // Rainfall in mm for the last 1 hour
-    // If rain data doesn't exist, use 0
+    // Rainfall in mm
     Rainfall_mm: rain?.['1h'] ?? rain?.['3h'] ?? 0,
   };
+
+  console.log('Data prepared for ML model:', necessaryData);
+
+  return necessaryData;
 };
 
 module.exports = {

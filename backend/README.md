@@ -36,7 +36,8 @@ This folder contains the Node.js/Express backend for the prediction app. It hand
 
 - POST /api/auth/register
   - Registers a new user
-  - Expects: name, email, password
+  - Expects: name, email, password, contactNumber
+  - Optional: sector (`Govt` or `Private`), departmentName, institutionName
   - Returns: JWT token
 
 - POST /api/auth/login
@@ -94,5 +95,4 @@ Authorization: Bearer <token>
 ```
 
 ## information regarding data flow
-
 

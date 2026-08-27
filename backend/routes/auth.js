@@ -6,14 +6,27 @@ const User = require('../models/User');
 // Register route
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+      contactNumber,
+      sector,
+      departmentName,
+      institutionName
+    } = req.body;
     //console.log(name, email, password);
-    if(!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email, and password are required' });
+    if (!name || !email || !password || !contactNumber) {
+      return res.status(400).json({ message: 'Name, email, password, and contact number are required' });
     }
 
-    if(password.length < 6) {
+    if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const normalizedSector = sector ? sector.trim() : null;
+    if (normalizedSector && !['Govt', 'Private'].includes(normalizedSector)) {
+      return res.status(400).json({ message: 'Sector must be either Govt or Private' });
     }
 
     // Check if user already exists
@@ -29,6 +42,10 @@ router.post('/register', async (req, res) => {
     user = new User({
       name,
       email,
+      contactNumber,
+      sector: normalizedSector,
+      departmentName: departmentName || null,
+      institutionName: institutionName || null,
       password: hashedPassword
     });
 

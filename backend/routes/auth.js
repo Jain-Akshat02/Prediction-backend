@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       contactNumber,
-      sector: normalizedSector,
+      sector: normalizedSector || null,
       departmentName: departmentName || null,
       institutionName: institutionName || null,
       password: hashedPassword

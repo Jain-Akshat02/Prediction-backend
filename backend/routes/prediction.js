@@ -2,6 +2,7 @@ const router = require('express').Router();
 const openWeather = require('../services/openWeather.service');
 const { necessaryDataExtraction } = require('../services/necessaryInfo.service');
 const mlService = require('../services/mlService');
+const SearchHistory = require('../models/SearchHistory');
 
 const { authenticate } = require('../middleware/auth');
 // /api/predict
@@ -43,7 +44,12 @@ router.post('/', authenticate, async (req, res) => {
 
     const prediction = await mlService.predict(necessaryData);
 
-
+    const label = weatherData?.name || null;
+    await SearchHistory.findOneAndUpdate(
+      { user: req.user._id, latitude: lat, longitude: lon },
+      { label, searchedAt: new Date() },
+      { upsert: true, new: true }
+    );
 
     res.json({ success: true,
        data: {

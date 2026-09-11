@@ -24,31 +24,59 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/predict', require('./routes/prediction'));
 app.use('/api/search-history', require('./routes/searchHistory'));
 
-// Create admin user on server start
+// Create or update admin user on server start based on .env
 const User = require('./models/User');
 const createAdminUser = async () => {
   try {
-    const adminExists = await User.findOne({ email: process.env.ADMIN_EMAIL });
+    const adminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.SUPER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      console.log('Super Admin credentials not configured in .env');
+      return;
+    }
+
+    const adminExists = await User.findOne({ email: adminEmail });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
       await User.create({
         name: 'Admin',
-        email: process.env.ADMIN_EMAIL,
+        email: adminEmail,
         password: hashedPassword,
         role: 'super_admin',
         isAdmin: true,
         contactNumber: 'N/A'
       });
-      console.log('Admin user created');
-    } else if (adminExists.getRole() !== 'super_admin') {
-      adminExists.role = 'super_admin';
-      adminExists.isAdmin = true;
-      if (!adminExists.contactNumber) adminExists.contactNumber = 'N/A';
-      await adminExists.save();
-      console.log('Configured admin promoted to super admin');
+      console.log(`Super admin user created for ${adminEmail}`);
+    } else {
+      let needsSave = false;
+
+      // Update password if .env password changed
+      const isMatch = await bcrypt.compare(adminPassword, adminExists.password);
+      if (!isMatch) {
+        adminExists.password = await bcrypt.hash(adminPassword, 10);
+        needsSave = true;
+        console.log(`Updated password for super admin ${adminEmail} from .env`);
+      }
+
+      if (adminExists.role !== 'super_admin' || !adminExists.isAdmin) {
+        adminExists.role = 'super_admin';
+        adminExists.isAdmin = true;
+        needsSave = true;
+        console.log(`Promoted user ${adminEmail} to super admin`);
+      }
+
+      if (!adminExists.contactNumber) {
+        adminExists.contactNumber = 'N/A';
+        needsSave = true;
+      }
+
+      if (needsSave) {
+        await adminExists.save();
+      }
     }
   } catch (error) {
-    console.log('Error creating admin:', error);
+    console.log('Error creating/updating admin:', error);
   }
 };
 

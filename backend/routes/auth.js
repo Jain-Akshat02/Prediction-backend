@@ -16,8 +16,8 @@ router.post('/register', async (req, res) => {
       institutionName
     } = req.body;
     //console.log(name, email, password);
-    if (!name || !email || !password || !contactNumber) {
-      return res.status(400).json({ message: 'Name, email, password, and contact number are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
     if (password.length < 6) {
@@ -42,7 +42,7 @@ router.post('/register', async (req, res) => {
     user = new User({
       name,
       email,
-      contactNumber,
+      contactNumber: contactNumber || null,
       sector: normalizedSector || null,
       departmentName: departmentName || null,
       institutionName: institutionName || null,
@@ -107,6 +107,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
+      role: user.getRole(),
       isAdmin: user.isAdmin,
       name: user.name,
       message: 'Login successful'

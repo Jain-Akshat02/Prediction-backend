@@ -79,7 +79,7 @@ This folder contains the Node.js/Express backend for the prediction app. It hand
 - `admin`: can view users and their activity
 - `super_admin`: can do everything an admin can do, create/remove admins, and delete regular users
 
-The configured `ADMIN_EMAIL` account is created or promoted to `super_admin` on startup. Existing records with `isAdmin: true` remain compatible and are treated as `admin` unless explicitly promoted.
+The configured `SUPER_ADMIN_EMAIL` account is created or promoted to `super_admin` on startup. Existing records with `isAdmin: true` remain compatible and are treated as `admin` unless explicitly promoted.
 
 ## Authentication Flow
 
@@ -96,8 +96,8 @@ Create a .env file in the root of the project with the following values:
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/prediction-app
 JWT_SECRET=your_secret_key
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=your_admin_password
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=your_SUPER_ADMIN_PASSWORD
 ```
 
 ## Running the Backend

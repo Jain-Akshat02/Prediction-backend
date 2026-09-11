@@ -25,16 +25,57 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const isSuperAdmin = (user) => {
+  if (!user) return false;
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+  return user.getRole() === 'super_admin' || (superAdminEmail && user.email === superAdminEmail);
+};
+
+const isAdmin = (user) => {
+  if (!user) return false;
+  return isSuperAdmin(user) || user.getRole() === 'admin' || user.isAdmin === true;
+};
+
+// Middleware: Requires user to be an Admin or Super Admin
+const verifyAdmin = [
+  authenticate,
+  (req, res, next) => {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Access denied: Admin privileges required' });
+    }
+    next();
+  }
+];
+
+// Middleware: Requires user to be a Super Admin (checks DB role & .env SUPER_ADMIN_EMAIL)
+const verifySuperAdmin = [
+  authenticate,
+  (req, res, next) => {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Access denied: Super Admin privileges required' });
+    }
+    next();
+  }
+];
+
 const requireRoles = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  if (!roles.includes(req.userRole)) {
+  if (!roles.includes(req.userRole) && !isSuperAdmin(req.user)) {
     return res.status(403).json({ message: 'Insufficient permissions' });
   }
 
   next();
 };
 
-module.exports = { authenticate, requireRoles };
+module.exports = {
+  authenticate,
+  verifyAdmin,
+  verifySuperAdmin,
+  requireRoles,
+  isAdmin,
+  isSuperAdmin
+};
+

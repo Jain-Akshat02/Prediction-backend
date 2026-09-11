@@ -2,14 +2,12 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const SearchHistory = require('../models/SearchHistory');
-const { authenticate, requireRoles } = require('../middleware/auth');
+const { verifyAdmin, verifySuperAdmin } = require('../middleware/auth');
 
-const adminAccess = [authenticate, requireRoles('admin', 'super_admin')];
-const superAdminAccess = [authenticate, requireRoles('super_admin')];
 const publicUserFields = '-password -__v';
 
 // Admins and super admins can view all users.
-router.get('/', ...adminAccess, async (req, res) => {
+router.get('/', verifyAdmin, async (req, res) => {
   try {
     const users = await User.find().select(publicUserFields).sort({ createdAt: -1 });
     res.json(users.map((user) => ({ ...user.toObject(), role: user.getRole() })));
@@ -19,7 +17,7 @@ router.get('/', ...adminAccess, async (req, res) => {
 });
 
 // Admins and super admins can view prediction/search activity.
-router.get('/activity', ...adminAccess, async (req, res) => {
+router.get('/activity', verifyAdmin, async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
     const filter = req.query.userId ? { user: req.query.userId } : {};
@@ -34,7 +32,7 @@ router.get('/activity', ...adminAccess, async (req, res) => {
   }
 });
 
-router.get('/:id/activity', ...adminAccess, async (req, res) => {
+router.get('/:id/activity', verifyAdmin, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select(publicUserFields);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -51,11 +49,11 @@ router.get('/:id/activity', ...adminAccess, async (req, res) => {
 });
 
 // Only a super admin can create another admin.
-router.post('/admins', ...superAdminAccess, async (req, res) => {
+router.post('/admins', verifySuperAdmin, async (req, res) => {
   try {
     const { name, email, password, contactNumber } = req.body;
-    if (!name || !email || !password || !contactNumber) {
-      return res.status(400).json({ message: 'Name, email, password, and contact number are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
     }
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
@@ -68,7 +66,7 @@ router.post('/admins', ...superAdminAccess, async (req, res) => {
       name,
       email,
       password: await bcrypt.hash(password, 10),
-      contactNumber,
+      contactNumber: contactNumber || 'N/A',
       role: 'admin',
       isAdmin: true
     });
@@ -85,7 +83,7 @@ router.post('/admins', ...superAdminAccess, async (req, res) => {
 });
 
 // Only a super admin can remove an admin.
-router.delete('/admins/:id', ...superAdminAccess, async (req, res) => {
+router.delete('/admins/:id', verifySuperAdmin, async (req, res) => {
   try {
     const admin = await User.findById(req.params.id);
     if (!admin || admin.getRole() !== 'admin') {
@@ -102,7 +100,7 @@ router.delete('/admins/:id', ...superAdminAccess, async (req, res) => {
 });
 
 // Only a super admin can delete regular users and their activity.
-router.delete('/:id', ...superAdminAccess, async (req, res) => {
+router.delete('/:id', verifySuperAdmin, async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user || user.getRole() !== 'user') {

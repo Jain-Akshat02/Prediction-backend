@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema({
   sector: {
     type: String,
     enum: ['Govt', 'Private'],
-    default: null
   },
   departmentName: {
     type: String,

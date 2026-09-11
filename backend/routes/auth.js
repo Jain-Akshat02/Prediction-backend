@@ -46,14 +46,16 @@ router.post('/register', async (req, res) => {
       sector: normalizedSector || null,
       departmentName: departmentName || null,
       institutionName: institutionName || null,
-      password: hashedPassword
+      password: hashedPassword,
+      role: 'user',
+      isAdmin: false
     });
 
     await user.save();
 
     // Create and return JWT token
     const token = jwt.sign(
-      { userId: user._id, isAdmin: user.isAdmin },
+      { userId: user._id, role: user.getRole() },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -78,7 +80,7 @@ router.post('/login', async (req, res) => {
     console.log('User found from database:', user); // Log the found user
 
     if (!user) {
-      console.log('No user found with this email'); // Log when user not found
+      console.log('No user found with this email');
       return res.status(400).json({ message: 'User not found' });
     }
 
@@ -90,18 +92,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    const role = user.getRole();
     const token = jwt.sign(
-      { 
-        userId: user._id, 
-        isAdmin: user.isAdmin, 
-        name: user.name ,
-        expiresIn: '1h'
-      },
-      process.env.JWT_SECRET
+      { userId: user._id, role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
     );
     console.log('Generated token and sending response with:', { // Log the response data
       token: token.substring(0, 20) + '...', // Only log part of the token for security
-      isAdmin: user.isAdmin,
+      isAdmin: role !== 'user',
+      role,
       name: user.name
     });
 

@@ -35,9 +35,17 @@ const createAdminUser = async () => {
         name: 'Admin',
         email: process.env.ADMIN_EMAIL,
         password: hashedPassword,
-        isAdmin: true
+        role: 'super_admin',
+        isAdmin: true,
+        contactNumber: 'N/A'
       });
       console.log('Admin user created');
+    } else if (adminExists.getRole() !== 'super_admin') {
+      adminExists.role = 'super_admin';
+      adminExists.isAdmin = true;
+      if (!adminExists.contactNumber) adminExists.contactNumber = 'N/A';
+      await adminExists.save();
+      console.log('Configured admin promoted to super admin');
     }
   } catch (error) {
     console.log('Error creating admin:', error);
@@ -47,4 +55,4 @@ const createAdminUser = async () => {
 createAdminUser();
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

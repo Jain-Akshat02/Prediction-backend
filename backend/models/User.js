@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'super_admin'],
+    default: 'user'
+  },
   isAdmin: {
     type: Boolean,
     default: false
@@ -43,5 +48,11 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+userSchema.methods.getRole = function getRole() {
+  if (this.role === 'super_admin') return 'super_admin';
+  if (this.role === 'admin' || this.isAdmin) return 'admin';
+  return 'user';
+};
 
 module.exports = mongoose.model('User', userSchema); 

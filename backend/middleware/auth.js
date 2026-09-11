@@ -17,11 +17,24 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    req.user = user;  // attach user to request
-    next();           // allow request through
+    req.user = user;
+    req.userRole = user.getRole();
+    next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
-module.exports = { authenticate };
+const requireRoles = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (!roles.includes(req.userRole)) {
+    return res.status(403).json({ message: 'Insufficient permissions' });
+  }
+
+  next();
+};
+
+module.exports = { authenticate, requireRoles };

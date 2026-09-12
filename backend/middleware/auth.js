@@ -25,18 +25,29 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-const isSuperAdmin = (user) => {
-  if (!user) return false;
-  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
-  return user.getRole() === 'super_admin' || (superAdminEmail && user.email === superAdminEmail);
-};
-
 const isAdmin = (user) => {
   if (!user) return false;
-  return isSuperAdmin(user) || user.getRole() === 'admin' || user.isAdmin === true;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAIL;
+  return user.getRole() === 'admin' || (adminEmail && user.email === adminEmail);
 };
 
-// Middleware: Requires user to be an Admin or Super Admin
+const isTeam = (user) => {
+  if (!user) return false;
+  return isAdmin(user) || user.getRole() === 'team' || user.isAdmin === true;
+};
+
+// Middleware: Requires a Team member or Admin.
+const verifyTeam = [
+  authenticate,
+  (req, res, next) => {
+    if (!isTeam(req.user)) {
+      return res.status(403).json({ message: 'Access denied: Team privileges required' });
+    }
+    next();
+  }
+];
+
+// Middleware: Requires an Admin.
 const verifyAdmin = [
   authenticate,
   (req, res, next) => {
@@ -47,23 +58,12 @@ const verifyAdmin = [
   }
 ];
 
-// Middleware: Requires user to be a Super Admin (checks DB role & .env SUPER_ADMIN_EMAIL)
-const verifySuperAdmin = [
-  authenticate,
-  (req, res, next) => {
-    if (!isSuperAdmin(req.user)) {
-      return res.status(403).json({ message: 'Access denied: Super Admin privileges required' });
-    }
-    next();
-  }
-];
-
 const requireRoles = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  if (!roles.includes(req.userRole) && !isSuperAdmin(req.user)) {
+  if (!roles.includes(req.userRole) && !isAdmin(req.user)) {
     return res.status(403).json({ message: 'Insufficient permissions' });
   }
 
@@ -72,10 +72,12 @@ const requireRoles = (...roles) => (req, res, next) => {
 
 module.exports = {
   authenticate,
+  verifyTeam,
   verifyAdmin,
-  verifySuperAdmin,
   requireRoles,
+  isTeam,
   isAdmin,
-  isSuperAdmin
+  // Backwards-compatible aliases for clients importing the old names.
+  verifySuperAdmin: verifyAdmin,
+  isSuperAdmin: isAdmin
 };
-

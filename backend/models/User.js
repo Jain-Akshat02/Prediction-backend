@@ -35,7 +35,10 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'super_admin'],
+    // super_admin and the old admin value are retained so existing records can
+    // be read safely during the nomenclature migration. New records use the
+    // canonical user/team/admin values.
+    enum: ['user', 'team', 'admin', 'super_admin'],
     default: 'user'
   },
   isAdmin: {
@@ -49,8 +52,9 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.methods.getRole = function getRole() {
-  if (this.role === 'super_admin') return 'super_admin';
-  if (this.role === 'admin' || this.isAdmin) return 'admin';
+  if (this.role === 'super_admin') return 'admin';
+  if (this.role === 'admin') return 'admin';
+  if (this.role === 'team' || this.isAdmin) return 'team';
   return 'user';
 };
 

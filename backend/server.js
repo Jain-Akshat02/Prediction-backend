@@ -24,15 +24,23 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/predict', require('./routes/prediction'));
 app.use('/api/search-history', require('./routes/searchHistory'));
 
-// Create or update admin user on server start based on .env
+// Create or update the top-level admin user on server start based on .env.
 const User = require('./models/User');
-const createAdminUser = async () => {
+const migrateRolesAndCreateAdmin = async () => {
   try {
-    const adminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.SUPER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+    // Existing records use: super_admin (top level), admin (team level).
+    // Only run this one-time conversion while legacy top-level records exist;
+    // otherwise a later restart could demote canonical admin records.
+    if (await User.exists({ role: 'super_admin' })) {
+      await User.updateMany({ role: 'admin' }, { $set: { role: 'team' } });
+      await User.updateMany({ role: 'super_admin' }, { $set: { role: 'admin' } });
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD;
 
     if (!adminEmail || !adminPassword) {
-      console.log('Super Admin credentials not configured in .env');
+      console.log('Admin credentials not configured in .env');
       return;
     }
 
@@ -43,11 +51,11 @@ const createAdminUser = async () => {
         name: 'Admin',
         email: adminEmail,
         password: hashedPassword,
-        role: 'super_admin',
+        role: 'admin',
         isAdmin: true,
         contactNumber: 'N/A'
       });
-      console.log(`Super admin user created for ${adminEmail}`);
+      console.log(`Admin user created for ${adminEmail}`);
     } else {
       let needsSave = false;
 
@@ -56,14 +64,14 @@ const createAdminUser = async () => {
       if (!isMatch) {
         adminExists.password = await bcrypt.hash(adminPassword, 10);
         needsSave = true;
-        console.log(`Updated password for super admin ${adminEmail} from .env`);
+        console.log(`Updated password for admin ${adminEmail} from .env`);
       }
 
-      if (adminExists.role !== 'super_admin' || !adminExists.isAdmin) {
-        adminExists.role = 'super_admin';
+      if (adminExists.role !== 'admin' || !adminExists.isAdmin) {
+        adminExists.role = 'admin';
         adminExists.isAdmin = true;
         needsSave = true;
-        console.log(`Promoted user ${adminEmail} to super admin`);
+        console.log(`Promoted user ${adminEmail} to admin`);
       }
 
       if (!adminExists.contactNumber) {
@@ -80,7 +88,7 @@ const createAdminUser = async () => {
   }
 };
 
-createAdminUser();
+migrateRolesAndCreateAdmin();
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

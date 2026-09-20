@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/jain-akshat/Documents/robofly/wildfire-model/venv
+set -gx VIRTUAL_ENV /home/jain-akshat/Documents/robofly/Prediction-backend/wildfire-model/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

@@ -150,9 +150,75 @@ def compute_fwi(df):
 
     return df
 
+
 # ============================================================
-#     HOW TO USE:
+#     POLYGON FWI RUNNER
 # ============================================================
-# df = pd.read_csv("your_file.csv")
-# df_with_fwi = compute_fwi(df)
-# df_with_fwi.to_csv("fwi_output.csv", index=False)
+
+from grid import polygon_to_grid
+
+def run_polygon_fwi(polygon_coords: list[list[float]], grid_spacing: float = 0.5, weather_override: dict | None = None):
+    grid_res = polygon_to_grid(polygon_coords, grid_spacing)
+    grid_pts = grid_res["grid_points"]
+
+    # default_weather = {
+    #     "temp": 32.0,
+    #     "humidity": 0.35,
+    #     "wind": 8.0,
+    #     "rainfall": 0.0
+    # }
+    w = weather_override or {}
+    now = pd.Timestamp.now()
+
+    rows = []
+    for pt in grid_pts:
+        rows.append({
+            "acq_date": now,
+            "latitude": pt["lat"],
+            "longitude": pt["lon"],
+            "Temperature_C": float(w.get("temp",32)),
+            "Humidity_Fraction": float(w.get("humidity",0.35)),
+            "Wind_Speed_kmh": float(w.get("wind",8.0)),
+            "Rainfall_mm": float(w.get("rainfall",0.0))
+        })
+
+    df = pd.DataFrame(rows)
+    fwi_df = compute_fwi(df)
+
+    results = []
+    for _, row in fwi_df.iterrows():
+        fwi_val = float(row["fwi"])
+        results.append({
+            "lat": float(row["latitude"]),
+            "lon": float(row["longitude"]),
+            "fwi": round(fwi_val, 2),
+            "classification": classify_fwi(fwi_val),
+            "sub_indices": {
+                "ffmc": round(float(row["ffmc"]), 2),
+                "dmc": round(float(row["dmc"]), 2),
+                "dc": round(float(row["dc"]), 2),
+                "isi": round(float(row["isi"]), 2),
+                "bui": round(float(row["bui"]), 2)
+            }
+        })
+
+    hottest = max(results, key=lambda r: r["fwi"])
+    safest = min(results, key=lambda r: r["fwi"])
+    mean_fwi = round(sum(r["fwi"] for r in results) / len(results), 2)
+    high_risk_count = sum(1 for r in results if r["fwi"] >= 20.0)
+
+    summary = {
+        "total_points": len(results),
+        "mean_fwi": mean_fwi,
+        "overall_classification": classify_fwi(mean_fwi),
+        "high_risk_count": high_risk_count,
+        "hottest_point": hottest,
+        "safest_point": safest
+    }
+
+    return {
+        "success": True,
+        "summary": summary,
+        "grid_results": results
+    }
+

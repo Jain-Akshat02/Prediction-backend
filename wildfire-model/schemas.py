@@ -42,3 +42,31 @@ class GridResponse(BaseModel):
     count: int
     bounds: Bounds
     grid_spacing: float
+
+
+class PolygonPredictionRequest(BaseModel):
+    coordinates: list[list[float]] = Field(
+        ...,
+        min_length=3,
+        description="Polygon vertices as [latitude, longitude] pairs.",
+    )
+    grid_spacing: float = Field(
+        default=0.5,
+        gt=0,
+        description="Grid step size in degrees.",
+    )
+    weather: dict | None = Field(
+        default=None,
+        description="Optional weather dictionary containing temp, humidity, wind, rainfall.",
+    )
+
+    @field_validator("coordinates")
+    @classmethod
+    def validate_coordinate_pairs(cls, coords: list[list[float]]) -> list[list[float]]:
+        for i, pair in enumerate(coords):
+            if len(pair) != 2:
+                raise ValueError(
+                    f"Coordinate {i} must be a [latitude, longitude] pair."
+                )
+        return coords
+

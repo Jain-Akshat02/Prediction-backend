@@ -5,7 +5,9 @@ const mlService = require('../services/mlService');
 const SearchHistory = require('../models/SearchHistory');
 
 const { authenticate } = require('../middleware/auth');
-// /api/predict
+const gridService = require('../services/gridService');
+
+// POST /api/predict
 router.post('/', authenticate, async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
@@ -70,5 +72,56 @@ router.post('/', authenticate, async (req, res) => {
   }
 }); 
 
+// POST /api/predict/polygon
+router.post('/polygon', authenticate, async (req, res) => {
+  try {
+    const { coordinates, grid_spacing } = req.body;
+
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'A coordinates array with at least 3 [latitude, longitude] pairs is required.'
+      });
+    }
+
+    for (let i = 0; i < coordinates.length; i++) {
+      const point = coordinates[i];
+      if (!Array.isArray(point) || point.length !== 2) {
+        return res.status(400).json({
+          success: false,
+          message: `Coordinate at index ${i} must be a [latitude, longitude] pair.`
+        });
+      }
+
+      const [lat, lon] = point.map(Number);
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        return res.status(400).json({
+          success: false,
+          message: `Coordinate at index ${i} contains invalid latitude or longitude.`
+        });
+      }
+    }
+
+    // Grid spacing defaults to 0.5 if not provided or invalid
+    const spacing = (grid_spacing !== undefined && !isNaN(Number(grid_spacing)) && Number(grid_spacing) > 0)
+      ? Number(grid_spacing)
+      : 0.5;
+
+    const gridResult = await gridService.generateGrid(coordinates, spacing);
+
+    res.json({
+      success: true,
+      data: gridResult
+    });
+
+  } catch (error) {
+    console.error('Polygon grid endpoint error:', error?.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: error?.response?.data?.detail || 'An internal error occurred while processing polygon coordinates.'
+    });
+  }
+});
 
 module.exports = router;
+

@@ -107,11 +107,37 @@ router.post('/polygon', authenticate, async (req, res) => {
       ? Number(grid_spacing)
       : 0.5;
 
-    const gridResult = await gridService.generateGrid(coordinates, spacing);
+    // Calculate polygon centroid (center latitude and longitude)
+    const sumLat = coordinates.reduce((sum, p) => sum + Number(p[0]), 0);
+    const sumLon = coordinates.reduce((sum, p) => sum + Number(p[1]), 0);
+    const centerLat = sumLat / coordinates.length;
+    const centerLon = sumLon / coordinates.length;
+
+    // Fetch live weather data for the polygon centroid
+    let weatherForModel = null;
+    try {
+      const weatherData = await openWeather.getWeather(centerLat, centerLon);
+      const necessaryData = await necessaryDataExtraction(weatherData);
+
+      weatherForModel = {
+        temp: necessaryData.Temperature_C,
+        humidity: necessaryData.Humidity_Fraction,
+        wind: necessaryData.Wind_Speed_kmh,
+        rainfall: necessaryData.Rainfall_mm
+      };
+    } catch (weatherErr) {
+      console.warn('Live weather fetch for polygon centroid failed, fallback will be used:', weatherErr.message);
+    }
+
+    const gridResult = await gridService.generateGrid(coordinates, spacing, weatherForModel);
 
     res.json({
       success: true,
-      data: gridResult
+      data: {
+        centroid: { lat: centerLat, lon: centerLon },
+        weather_used: weatherForModel,
+        ...gridResult
+      }
     });
 
   } catch (error) {
@@ -124,4 +150,5 @@ router.post('/polygon', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+
 

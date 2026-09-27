@@ -23,6 +23,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/predict', require('./routes/prediction'));
 app.use('/api/search-history', require('./routes/searchHistory'));
+app.use('/api/saved-areas', require('./routes/savedAreas'));
+
 
 // Create or update the top-level admin user on server start based on .env.
 const User = require('./models/User');

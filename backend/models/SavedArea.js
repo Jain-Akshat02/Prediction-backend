@@ -1,16 +1,21 @@
 const mongoose = require('mongoose');
 
-const searchHistorySchema = new mongoose.Schema({
+const savedAreaSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
     index: true
   },
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
   type: {
     type: String,
     enum: ['point', 'polygon'],
-    default: 'point'
+    default: 'polygon'
   },
   latitude: {
     type: Number,
@@ -32,13 +37,17 @@ const searchHistorySchema = new mongoose.Schema({
     type: Object,
     default: null
   },
-  searchedAt: {
+  notes: {
+    type: String,
+    default: ''
+  },
+  savedAt: {
     type: Date,
     default: Date.now,
     index: true
   }
 });
 
-searchHistorySchema.index({ user: 1, searchedAt: -1 });
+savedAreaSchema.index({ user: 1, savedAt: -1 });
 
-module.exports = mongoose.model('SearchHistory', searchHistorySchema);
+module.exports = mongoose.model('SavedArea', savedAreaSchema);

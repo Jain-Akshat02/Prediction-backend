@@ -48,8 +48,16 @@ router.post('/', authenticate, async (req, res) => {
 
     const label = weatherData?.name || null;
     await SearchHistory.findOneAndUpdate(
-      { user: req.user._id, latitude: lat, longitude: lon },
-      { label, searchedAt: new Date() },
+      { user: req.user._id, latitude: lat, longitude: lon, type: 'point' },
+      {
+        user: req.user._id,
+        type: 'point',
+        latitude: lat,
+        longitude: lon,
+        label,
+        summary: prediction,
+        searchedAt: new Date()
+      },
       { upsert: true, new: true }
     );
 
@@ -131,6 +139,21 @@ router.post('/polygon', authenticate, async (req, res) => {
 
     const gridResult = await gridService.generateGrid(coordinates, spacing, weatherForModel);
 
+    // Save polygon search to user search history automatically
+    try {
+      await SearchHistory.create({
+        user: req.user._id,
+        type: 'polygon',
+        polygonCoordinates: coordinates,
+        latitude: centerLat,
+        longitude: centerLon,
+        summary: gridResult?.summary || null,
+        searchedAt: new Date()
+      });
+    } catch (historyErr) {
+      console.warn('Failed to record polygon search history:', historyErr.message);
+    }
+
     res.json({
       success: true,
       data: {
@@ -139,6 +162,7 @@ router.post('/polygon', authenticate, async (req, res) => {
         ...gridResult
       }
     });
+
 
   } catch (error) {
     console.error('Polygon grid endpoint error:', error?.response?.data || error.message);

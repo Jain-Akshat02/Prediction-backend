@@ -9,7 +9,7 @@ const savedAreaSchema = new mongoose.Schema({
   },
   title: {
     type: String,
-    required: true,
+    default: 'Saved Prediction Area',
     trim: true
   },
   type: {
@@ -34,6 +34,10 @@ const savedAreaSchema = new mongoose.Schema({
     default: null
   },
   summary: {
+    type: Object,
+    default: null
+  },
+  predictionData: {
     type: Object,
     default: null
   },

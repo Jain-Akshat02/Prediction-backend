@@ -55,54 +55,71 @@ router.post('/', authenticate, async (req, res) => {
       polygonCoordinates,
       label,
       summary,
+      predictionData,
       notes
     } = req.body;
 
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Title is required for saving an area.'
-      });
+    // Extract type and data from predictionData if provided
+    let areaType = type;
+    let fullPrediction = predictionData || null;
+    let coords = polygonCoordinates || null;
+    let lat = latitude;
+    let lon = longitude;
+    let summaryObj = summary || null;
+
+    if (fullPrediction) {
+      if (fullPrediction.grid_results || fullPrediction.summary) {
+        areaType = 'polygon';
+        summaryObj = summaryObj || fullPrediction.summary || null;
+        coords = coords || fullPrediction.coordinates || fullPrediction.polygonCoordinates || null;
+        if (fullPrediction.centroid) {
+          lat = lat ?? fullPrediction.centroid.lat;
+          lon = lon ?? fullPrediction.centroid.lon;
+        }
+      } else if (fullPrediction.prediction) {
+        areaType = 'point';
+        lat = lat ?? fullPrediction.latitude;
+        lon = lon ?? fullPrediction.longitude;
+      }
     }
 
-    const areaType = type === 'point' ? 'point' : 'polygon';
+    areaType = areaType === 'point' ? 'point' : 'polygon';
 
-    if (areaType === 'polygon' && (!polygonCoordinates || !Array.isArray(polygonCoordinates))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Polygon coordinates are required for saving a polygon area.'
-      });
-    }
-
-    if (areaType === 'point' && (latitude === undefined || longitude === undefined)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Latitude and longitude are required for saving a point area.'
-      });
+    // Generate fallback title if user did not provide one
+    let defaultTitle = title && title.trim() ? title.trim() : null;
+    if (!defaultTitle) {
+      if (areaType === 'polygon') {
+        const riskLabel = summaryObj?.overall_classification ? ` (${summaryObj.overall_classification} Risk)` : '';
+        defaultTitle = `Saved Polygon Area${riskLabel}`;
+      } else {
+        const placeName = label ? ` - ${label}` : '';
+        defaultTitle = `Saved Location${placeName}`;
+      }
     }
 
     const savedArea = await SavedArea.create({
       user: req.user._id,
-      title: title.trim(),
+      title: defaultTitle,
       type: areaType,
-      latitude: areaType === 'point' ? Number(latitude) : undefined,
-      longitude: areaType === 'point' ? Number(longitude) : undefined,
-      polygonCoordinates: areaType === 'polygon' ? polygonCoordinates : undefined,
+      latitude: lat !== undefined ? Number(lat) : undefined,
+      longitude: lon !== undefined ? Number(lon) : undefined,
+      polygonCoordinates: coords,
       label: label || null,
-      summary: summary || null,
+      summary: summaryObj,
+      predictionData: fullPrediction,
       notes: notes || ''
     });
 
     res.status(201).json({
       success: true,
       data: savedArea,
-      message: 'Area saved successfully'
+      message: 'Prediction area saved successfully'
     });
   } catch (error) {
     console.error('Save area error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to save area'
+      message: 'Failed to save prediction area'
     });
   }
 });

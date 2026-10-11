@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -55,7 +56,8 @@ const migrateRolesAndCreateAdmin = async () => {
         password: hashedPassword,
         role: 'admin',
         isAdmin: true,
-        contactNumber: 'N/A'
+        contactNumber: 'N/A',
+        accountStatus: 'approved',
       });
       console.log(`Admin user created for ${adminEmail}`);
     } else {
@@ -78,6 +80,11 @@ const migrateRolesAndCreateAdmin = async () => {
 
       if (!adminExists.contactNumber) {
         adminExists.contactNumber = 'N/A';
+        needsSave = true;
+      }
+
+      if (adminExists.accountStatus !== 'approved') {
+        adminExists.accountStatus = 'approved';
         needsSave = true;
       }
 
